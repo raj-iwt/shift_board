@@ -15,30 +15,33 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap navbar-expand-md py-0">
-        <a class="navbar-brand col-5 col-sm-3 col-md-2 mr-0" href="#">
-            SchedulePro
-        </a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
-            aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse px-3" id="navbarCollapse">
-            <div class="navbar-nav mr-auto">
-                <a class="nav-item nav-link" href="#">Home</a>
-                <a class="nav-item nav-link" href="#">Dashboard</a>
-                <a class="nav-item active nav-link" href="#">Schedule <span class="sr-only">(current)</span></a>
-                <a class="nav-item nav-link" href="#">Timesheets</a>
-                <a class="nav-item nav-link" href="#">Reports</a>
+    <header>
+        <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap navbar-expand-md py-0">
+            <a class="navbar-brand col-5 col-sm-3 col-md-2 mr-0" href="#">
+                SchedulePro
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse px-3" id="navbarCollapse">
+                <div class="navbar-nav mr-auto">
+                    <a class="nav-item nav-link" href="#">Home</a>
+                    <a class="nav-item nav-link" href="#">Dashboard</a>
+                    <a class="nav-item active nav-link" href="#">Schedule <span class="sr-only">(current)</span></a>
+                    <a class="nav-item nav-link" href="#">Timesheets</a>
+                    <a class="nav-item nav-link" href="#">Reports</a>
+                </div>
+                <div class="navbar-nav my-2 my-lg-0">
+                    <a class="nav-item nav-link" href="#">John Smith</a>
+                </div>
             </div>
-            <div class="navbar-nav my-2 my-lg-0">
-                <a class="nav-item nav-link" href="#">John Smith</a>
-            </div>
-        </div>
-    </nav>
+        </nav>
+    </header>
     <main role="main" class="container-fluid px-4">
         <h2>Employee Schedules</h2>
         <div id='employee-schedules'></div>
+        
         <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
             integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
             crossorigin="anonymous"></script>
@@ -56,6 +59,8 @@
         <script src="src/data/employee.repository.js"></script>
         <script src="src/data/shiftPattern.repository.js"></script>
         <script src="src/data/shift.repository.js"></script>
+        <script src="src/services/rule.service.js"></script>
+        <script src="src/services/Rules/rules.js"></script>
 
         <script>
             document.addEventListener('DOMContentLoaded', loadSchedules);
@@ -64,7 +69,8 @@
             var shiftPatternRepository = new ShiftPatternRepository();
             var shiftRepository = new ShiftRepository();
 
-            var scheduleService = new ScheduleService(employeeRepository, shiftPatternRepository, shiftRepository, 10);
+            var ruleService = new RuleService();
+            var scheduleService = new ScheduleService(employeeRepository, shiftPatternRepository, shiftRepository, ruleService, 10);
             var shiftController = new ShiftController(scheduleService, loadSchedules);
             var scheduleController = new ScheduleController(scheduleService);
 
@@ -78,6 +84,22 @@
                 $(".s2").on('click', shiftController.select);
             }
         </script>
+    </main>
+    <footer>
+        <div class="position-fixed bottom-0 right-0 p-3" style="z-index: 5; right: 0; bottom: 0;">
+          <div id="errorLayout" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-delay="2000">
+            <div class="toast-header">
+              <strong class="mr-auto">Error</strong>
+              <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="toast-body">
+                The shift must not exceed more than 5 work days in a row.
+            </div>
+          </div>
+        </div>
+    </footer>
 </body>
 
 </html>

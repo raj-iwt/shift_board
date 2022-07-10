@@ -1,81 +1,115 @@
-function ScheduleService(employeeRepository, shiftPatternRepository, shiftRepository, employeeCount) {
-    var _self = this;
+function ScheduleService(
+  employeeRepository,
+  shiftPatternRepository,
+  shiftRepository,
+  ruleService,
+  employeeCount
+) {
+  var _self = this;
 
-    _self.employeeRepository = employeeRepository;
-    _self.shiftPatternRepository = shiftPatternRepository;
-    _self.shiftRepository = shiftRepository;
-    _self.employeeCount = employeeCount;
+  _self.employeeRepository = employeeRepository;
+  _self.shiftPatternRepository = shiftPatternRepository;
+  _self.shiftRepository = shiftRepository;
+  _self.ruleService = ruleService;
+  _self.employeeCount = employeeCount;
 
-    _self.getEmployeeSchedules = async function (startDate, endDate) {
-        var filteredEmployeeSchedules = [];
-        var employeeSchedules = await _fetchEmployeeSchedules();
-        employeeSchedules.forEach(function (employeeSchedule) {
-            var filteredEmployeeShifts = [];
+  _self.getEmployeeSchedules = async function (startDate, endDate) {
+    var filteredEmployeeSchedules = [];
+    var employeeSchedules = await _fetchEmployeeSchedules();
+    employeeSchedules.forEach(function (employeeSchedule) {
+      var filteredEmployeeShifts = [];
 
-            employeeSchedule.shifts.forEach(function (employeeShift) {
-                if (employeeShift.shiftDate.isSameOrAfter(startDate) && employeeShift.shiftDate.isSameOrBefore(endDate)) {
-                    filteredEmployeeShifts.push(employeeShift);
-                }
-            });
-
-            filteredEmployeeSchedules.push({
-                employee: employeeSchedule.employee,
-                shifts: filteredEmployeeShifts
-            });
-        });
-
-        return filteredEmployeeSchedules;
-    };
-
-    _self.getEmployeeShift = async function (employeeShiftId) {
-        var employeeSchedules = await _fetchEmployeeSchedules();
-        for (const employeeSchedule of employeeSchedules) {
-            for (const employeeShift of employeeSchedule.shifts) {
-                if (employeeShift.id === employeeShiftId) {
-                    return { employeeShift, employeeSchedule };
-                }
-            }
+      employeeSchedule.shifts.forEach(function (employeeShift) {
+        if (
+          employeeShift.shiftDate.isSameOrAfter(startDate) &&
+          employeeShift.shiftDate.isSameOrBefore(endDate)
+        ) {
+          filteredEmployeeShifts.push(employeeShift);
         }
+      });
 
-        return null;
-    };
+      filteredEmployeeSchedules.push({
+        employee: employeeSchedule.employee,
+        shifts: filteredEmployeeShifts,
+      });
+    });
 
-    _self.updateEmployeeShift = async function (employeeShiftId, updatedEmployeeShift) {
-        let { employeeShift, employeeSchedule } = await _self.getEmployeeShift(employeeShiftId);
+    return filteredEmployeeSchedules;
+  };
 
-        if(!employeeShift) {
-            throw new Error("Could not find shift.");
+  _self.getEmployeeShift = async function (employeeShiftId) {
+    var employeeSchedules = await _fetchEmployeeSchedules();
+    for (const employeeSchedule of employeeSchedules) {
+      for (const employeeShift of employeeSchedule.shifts) {
+        if (employeeShift.id === employeeShiftId) {
+          return { employeeShift, employeeSchedule };
         }
-
-        return _self.shiftRepository.updateShift(employeeShiftId, updatedEmployeeShift);
-    };
-
-    async function _fetchEmployeeSchedules() {
-        var employeeSchedules = [];
-
-        let employees = (await _self.employeeRepository.getEmployees()).slice(0, _self.employeeCount);
-
-        for (const employee of employees) {
-            let employeeShifts = [];
-            let shifts = await _self.shiftRepository.getShifts();
-            shifts.forEach(function (shift) {
-                if (shift.employeeId === employee.employeeId) {
-                    employeeShifts.push({
-                        id: shift.id,
-                        shiftDate: moment(shift.shiftDate),
-                        position: shift.position,
-                        location: shift.location,
-                        shiftCode: shift.shiftCode
-                    });
-                }
-            });
-
-            employeeSchedules.push({
-                employee: employee,
-                shifts: employeeShifts,
-            });
-        }
-
-        return employeeSchedules;
+      }
     }
+
+    return null;
+  };
+
+  _self.updateEmployeeShift = async function (
+    employeeShiftId,
+    updatedEmployeeShift
+  ) {
+    let { employeeShift, employeeSchedule } = await _self.getEmployeeShift(
+      employeeShiftId
+    );
+
+    if (!employeeShift) {
+      throw new Error("Could not find shift.");
+    }
+
+    var isValid = _self.ruleService.applyRule(
+      Rules.notMoreThanFiveWorkDaysInARow,
+      employeeShift,
+      updatedEmployeeShift,
+      employeeSchedule
+    );
+    if (!isValid) {
+      var toastElement = document.getElementById("errorLayout");
+      const toast = new bootstrap.Toast(toastElement);
+      toast.show();
+      throw new Error("Could not find shift.");
+    }
+
+    return _self.shiftRepository.updateShift(
+      employeeShiftId,
+      updatedEmployeeShift
+    );
+  };
+
+  async function _fetchEmployeeSchedules() {
+    var employeeSchedules = [];
+
+    let employees = (await _self.employeeRepository.getEmployees()).slice(
+      0,
+      _self.employeeCount
+    );
+
+    for (const employee of employees) {
+      let employeeShifts = [];
+      let shifts = await _self.shiftRepository.getShifts();
+      shifts.forEach(function (shift) {
+        if (shift.employeeId === employee.employeeId) {
+          employeeShifts.push({
+            id: shift.id,
+            shiftDate: moment(shift.shiftDate),
+            position: shift.position,
+            location: shift.location,
+            shiftCode: shift.shiftCode,
+          });
+        }
+      });
+
+      employeeSchedules.push({
+        employee: employee,
+        shifts: employeeShifts,
+      });
+    }
+
+    return employeeSchedules;
+  }
 }
